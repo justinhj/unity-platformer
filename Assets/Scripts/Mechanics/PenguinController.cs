@@ -10,9 +10,14 @@ namespace Platformer.Mechanics {
         internal Animator animator;
         // Start is called before the first frame update
 
-        internal GameObject player;
+        private GameObject player;
+        private bool airborne = false;
+
+        private SpriteRenderer spriteRenderer;
 
         void Awake() {
+            animator = GetComponent<Animator>();
+            spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
         protected override void Update() {
@@ -36,8 +41,7 @@ namespace Platformer.Mechanics {
                     }
                 } else {
                     playerPos = pc.GetBodyPosition();
-                    float delta = body.position.x - playerPos.x;
-                    Debug.LogWarning($"Player x difference {delta}");
+                    // Debug.LogWarning($"Player x difference {delta}");
                 }
             } else {
                  Debug.LogError("Player not found!");
@@ -46,7 +50,24 @@ namespace Platformer.Mechanics {
             base.Update();
         }
         private void UpdateMovement(Vector2 target) {
-            
+            // Look at the player
+            float delta = body.position.x - target.x;
+            if(delta > 0) {
+                spriteRenderer.flipX = true;
+            } else {
+                spriteRenderer.flipX = false;
+            }
+
+            // TODO why double needed?
+            velocity += -2 * Time.deltaTime * Physics2D.gravity;
+        }
+        protected override void ComputeVelocity()
+        {
+            // Called by update on the base kinematic object
+
+
+
+            base.ComputeVelocity();
         }
     }
 }
