@@ -125,20 +125,35 @@ namespace Platformer.Mechanics
 
         }
 
+        public Vector2? SpeculativeCollide(Vector2 move)
+        {
+            var distance = move.magnitude;
+            Vector2? hit = null;
+            var count = body.Cast(move, contactFilter, hitBuffer, distance + shellRadius);
+            if(count > 0)
+            {
+                // TODO should we differentiate between different collisions?
+                hit = hitBuffer[0].point;   
+            }
+            return hit;
+        }
+
         void PerformMovement(Vector2 move, bool yMovement)
         {
             var distance = move.magnitude;
 
+            // Don't move small distances to avoid jitter probably
             if (distance > minMoveDistance)
             {
                 //check if we hit anything in current direction of travel
+                // hit buffer is a preallocated array field
                 var count = body.Cast(move, contactFilter, hitBuffer, distance + shellRadius);
                 for (var i = 0; i < count; i++)
                 {
                     var currentNormal = hitBuffer[i].normal;
 
                     //is this surface flat enough to land on?
-                    if (currentNormal.y > minGroundNormalY)
+                    if (currentNormal.y > minGroundNormalY) // this is a dotproduct lol
                     {
                         IsGrounded = true;
                         // if moving up, change the groundNormal to new surface normal.
@@ -155,13 +170,13 @@ namespace Platformer.Mechanics
                         if (projection < 0)
                         {
                             //slower velocity if moving against the normal (up a hill).
-                            velocity = velocity - projection * currentNormal;
+                            velocity -= projection * currentNormal;
                         }
                     }
                     else
                     {
                         //We are airborne, but hit something, so cancel vertical up and horizontal velocity.
-                        velocity.x *= 0;
+                        velocity.x = 0;
                         velocity.y = Mathf.Min(velocity.y, 0);
                     }
                     //remove shellDistance from actual move distance.
@@ -169,7 +184,7 @@ namespace Platformer.Mechanics
                     distance = modifiedDistance < distance ? modifiedDistance : distance;
                 }
             }
-            body.position = body.position + move.normalized * distance;
+            body.position += move.normalized * distance;
         }
 
     }

@@ -46,8 +46,14 @@ namespace Platformer.Mechanics {
             } else {
                  Debug.LogError("Player not found!");
             }
+
+            FixedUpdate();
             UpdateMovement(playerPos);
             base.Update();
+
+            // if(IsGrounded) {
+            //     Debug.Log($"IsGrounded {IsGrounded}");
+            // }
         }
         private void UpdateMovement(Vector2 target) {
             // Look at the player
@@ -59,7 +65,8 @@ namespace Platformer.Mechanics {
             }
 
             // TODO why double needed?
-            velocity += -2 * Time.deltaTime * Physics2D.gravity;
+            // velocity += -2 * Time.deltaTime * Physics2D.gravity;
+            // velocity += Time.deltaTime * Physics2D.gravity;
         }
         protected override void ComputeVelocity()
         {

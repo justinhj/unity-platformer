@@ -5,6 +5,7 @@ using Platformer.Gameplay;
 using static Platformer.Core.Simulation;
 using Platformer.Model;
 using Platformer.Core;
+using System;
 
 namespace Platformer.Mechanics
 {
@@ -17,6 +18,7 @@ namespace Platformer.Mechanics
         public AudioClip jumpAudio;
         public AudioClip respawnAudio;
         public AudioClip ouchAudio;
+        private LineRenderer lineRenderer;
 
         /// <summary>
         /// Max horizontal speed of the player.
@@ -42,6 +44,10 @@ namespace Platformer.Mechanics
 
         public Bounds Bounds => collider2d.bounds;
 
+        private Vector3? WallJumpAnchor; 
+        public float MaxWallJumpDistance = 2f;
+        public LayerMask collisionLayer; // Specify which layers to consider for collision
+
         void Awake()
         {
             health = GetComponent<Health>();
@@ -49,6 +55,19 @@ namespace Platformer.Mechanics
             collider2d = GetComponent<Collider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
             animator = GetComponent<Animator>();
+            lineRenderer = GetComponent<LineRenderer>();
+            WallJumpAnchor = null;
+        }
+
+        void UpdateWallJumpAnchor() {
+            // Cast a ray forward from the player's position
+            float direction = spriteRenderer.flipX ? -1.0f : 1.0f;
+            Vector2 rayDirection = direction * MaxWallJumpDistance * Vector3.right;
+            WallJumpAnchor = SpeculativeCollide(rayDirection);
+        }
+
+        public Vector3? GetWallJumpAnchor() {
+            return WallJumpAnchor;
         }
 
         // TODO this should check if the player is near enough to a wall to jump off it
@@ -58,6 +77,14 @@ namespace Platformer.Mechanics
         }
         protected override void Update()
         {
+            // debug indicators (TODO should have a flag to toggle them)
+            // Vector3 offset = Vector3.right * 1;
+            // Vector3 startPosition = body.position;
+            // Vector3 endPosition = startPosition + offset;
+            // Vector3 impactPosition = startPosition + (endPosition - startPosition) * 0.5f;
+            // impactPosition.y += 0.5f; 
+            // lineRenderer.SetPositions(new Vector3[] { startPosition, impactPosition, endPosition });
+
             if (controlEnabled)
             {
                 // move is a vector2 for player movement input
@@ -77,6 +104,8 @@ namespace Platformer.Mechanics
             {
                 move.x = 0;
             }
+            
+            UpdateWallJumpAnchor();
             UpdateJumpState();
             base.Update();
         }
