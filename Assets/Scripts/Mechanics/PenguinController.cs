@@ -11,7 +11,7 @@ namespace Platformer.Mechanics {
         // Start is called before the first frame update
 
         private GameObject player;
-        private bool airborne = false;
+        // private bool airborne = false;
 
         private SpriteRenderer spriteRenderer;
 

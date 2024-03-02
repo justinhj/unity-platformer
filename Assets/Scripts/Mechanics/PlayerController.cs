@@ -47,6 +47,7 @@ namespace Platformer.Mechanics
         private Vector3? WallJumpAnchor; 
         public float MaxWallJumpDistance = 2f;
         public LayerMask collisionLayer; // Specify which layers to consider for collision
+        private bool triggerWallJump;
 
         void Awake()
         {
@@ -70,30 +71,24 @@ namespace Platformer.Mechanics
             return WallJumpAnchor;
         }
 
-        // TODO this should check if the player is near enough to a wall to jump off it
-        // for now it always can
         private bool CanWallJump() {
-            return true;
+            return WallJumpAnchor.HasValue;
         }
         protected override void Update()
         {
-            // debug indicators (TODO should have a flag to toggle them)
-            // Vector3 offset = Vector3.right * 1;
-            // Vector3 startPosition = body.position;
-            // Vector3 endPosition = startPosition + offset;
-            // Vector3 impactPosition = startPosition + (endPosition - startPosition) * 0.5f;
-            // impactPosition.y += 0.5f; 
-            // lineRenderer.SetPositions(new Vector3[] { startPosition, impactPosition, endPosition });
-
             if (controlEnabled)
             {
                 // move is a vector2 for player movement input
                 // What are the units?
                 move.x = Input.GetAxis("Horizontal");
                 // TODO the double jump should allow jumping when not grounded and second jump is allowed
-                if (Input.GetButtonDown("Jump") && 
-                    (jumpState == JumpState.Grounded || CanWallJump()))
-                    jumpState = JumpState.PrepareToJump;
+                if(Input.GetButtonDown("Jump")) {
+                    if(jumpState == JumpState.Grounded)
+                        jumpState = JumpState.PrepareToJump;
+                    if(jumpState == JumpState.InFlight && CanWallJump()) {
+                        jumpState = JumpState.PrepareToWallJump;
+                    }
+                }
                 else if (Input.GetButtonUp("Jump"))
                 {
                     stopJump = true;
@@ -106,7 +101,9 @@ namespace Platformer.Mechanics
             }
             
             UpdateWallJumpAnchor();
+            Debug.Log($"state pre update jump {jumpState}");
             UpdateJumpState();
+            Debug.Log($"state post update jump {jumpState}");
             base.Update();
         }
 
@@ -117,11 +114,17 @@ namespace Platformer.Mechanics
         void UpdateJumpState()
         {
             triggerJump = false;
+            triggerWallJump = false;
             switch (jumpState)
             {
                 case JumpState.PrepareToJump:
                     jumpState = JumpState.Jumping;
                     triggerJump = true;
+                    stopJump = false;
+                    break;
+                case JumpState.PrepareToWallJump:
+                    jumpState = JumpState.WallJumping;
+                    triggerWallJump = true;
                     stopJump = false;
                     break;
                 case JumpState.Jumping:
@@ -131,7 +134,15 @@ namespace Platformer.Mechanics
                         jumpState = JumpState.InFlight;
                     }
                     break;
+                case JumpState.WallJumping:
+                    if (!IsGrounded)
+                    {
+                        Schedule<PlayerJumped>().player = this;
+                        jumpState = JumpState.WallJumpInFlight;
+                    }
+                    break;
                 case JumpState.InFlight:
+                case JumpState.WallJumpInFlight:
                     if (IsGrounded)
                     {
                         Schedule<PlayerLanded>().player = this;
@@ -150,6 +161,11 @@ namespace Platformer.Mechanics
             {
                 velocity.y = jumpTakeOffSpeed * model.jumpModifier;
                 triggerJump = false;
+            }
+            else if (triggerWallJump)
+            {
+                velocity.y = jumpTakeOffSpeed * model.jumpModifier * 2;
+                triggerWallJump = false;
             }
             else if (stopJump)
             {
@@ -176,8 +192,11 @@ namespace Platformer.Mechanics
         {
             Grounded,
             PrepareToJump,
+            PrepareToWallJump,
             Jumping,
+            WallJumping,
             InFlight,
+            WallJumpInFlight,
             Landed
         }
     }
